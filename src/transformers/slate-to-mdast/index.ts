@@ -23,15 +23,22 @@ export type SlateBuilder = (
 ) => object | undefined;
 
 export const slateToMdast = (
-  nodes: Node[],
+  node: slate.Node,
   overrides: OverridedSlateBuilders
-): Root => {
-  return <Root>{
+): mdast.Root => {
+  return buildMdastRoot(node, overrides);
+};
+
+const buildMdastRoot = (
+  node: slate.Node,
+  overrides: OverridedSlateBuilders
+): mdast.Root => {
+  return <mdast.Root>{
     type: "root",
     children: convertNodes(
-      nodes as slate.Node[],
+      (node as any).children,
       overrides
-    ) as Root["children"],
+    ) as mdast.Root["children"],
   };
 };
 
@@ -184,7 +191,7 @@ const buildMdastNode = (
   node: Exclude<slateInternal.SlateNode, slateInternal.Text>,
   overrides: OverridedSlateBuilders
 ): Exclude<
-  mdast.RootContent | mdast.Math | mdast.InlineMath,
+  mdast.Content | mdast.Math | mdast.InlineMath,
   TextOrDecoration
 > | null => {
   const customNode = overrides[node.type]?.(node as any, (children) =>
@@ -235,6 +242,8 @@ const buildMdastNode = (
       return buildLinkReference(node, overrides);
     case "imageReference":
       return buildImageReference(node);
+    case "footnote":
+      return buildFootnote(node, overrides);
     case "footnoteReference":
       return creatFootnoteReference(node);
     case "math":
@@ -504,6 +513,16 @@ const buildImageReference = ({
     label,
     alt,
     referenceType,
+  };
+};
+
+const buildFootnote = (
+  { type, children }: slateInternal.Footnote,
+  overrides: OverridedSlateBuilders
+): mdast.Footnote => {
+  return {
+    type,
+    children: convertNodes(children, overrides) as mdast.Footnote["children"],
   };
 };
 

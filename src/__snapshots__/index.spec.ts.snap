@@ -1553,26 +1553,26 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 aaaaaaaa**bold**_emphasis_~~delete~~\`inline code\`
 
-- list
+-   list
 
-  - list
-    - list
-  - list
-  - list
+    -   list
+        -   list
+    -   list
+    -   list
 
-- [ ] not checked
+-   [ ] not checked
 
-- [x] checked
+-   [x] checked
 
-1. ordered list
-2. ordered list
-3. ordered list
-   1. aaa
-   2. aaa
-      1. eeeee
-      2. eeeee
-   3. aaa
-4. ordered list
+1.  ordered list
+2.  ordered list
+3.  ordered list
+    1.  aaa
+    2.  aaa
+        1.  eeeee
+        2.  eeeee
+    3.  aaa
+4.  ordered list
 
 This is [link to GitHub.com](https://github.com/).
 
@@ -3118,7 +3118,7 @@ aaa_**aa**_**~~aa~~**aaa _aa **a ~~aa~~ aa \`aaa\` aaaaa** aaaa_ aa\`a*aa*aa_aa_
 
 # **heading**
 
-- **list**
+-   **list**
 
 > **quote**
 
@@ -3414,10 +3414,10 @@ exports[`issues issue42 1`] = `
 `;
 
 exports[`issues issue42 2`] = `
-"- list
-  - list
-- list
-- list
+"-   list
+    -   list
+-   list
+-   list
 -
 "
 `;
@@ -3851,9 +3851,9 @@ exports[`options override builders 2`] = `
 `;
 
 exports[`options override builders 3`] = `
-"- AAAA
-  - BBBB
+"-   AAAA
+    -   BBBB
 
-- CCCC
+-   CCCC
 "
 `;

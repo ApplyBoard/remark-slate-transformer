@@ -14,7 +14,7 @@ export interface TOML extends Literal {
 
 /** @internal */
 declare module "mdast" {
-  interface RootContentMap {
+  interface FrontmatterContentMap {
     toml: TOML;
   }
 }
