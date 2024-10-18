@@ -47,6 +47,8 @@ jobs:
         run: aws codeartifact login --tool npm --repository applyboard-npm --domain applyboard-repository-manager --namespace @applyboard
         shell: bash
 
+      - run: npm ci
+
       - name: Build package to publish
         run: npm run build
         shell: bash
