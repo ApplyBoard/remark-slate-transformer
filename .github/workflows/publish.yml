@@ -55,5 +55,5 @@ jobs:
 
       - name: Publish the package
         run: |
-          npm publish --registry https://applyboard-repository-manager-649614366484.d.codeartifact.us-east-1.amazonaws.com/npm/applyboard-npm/ -u aws -p ${CODEARTIFACT_TOKEN} --skip-existing
+          npm publish --registry https://applyboard-repository-manager-649614366484.d.codeartifact.us-east-1.amazonaws.com/npm/applyboard-npm/
         shell: bash
