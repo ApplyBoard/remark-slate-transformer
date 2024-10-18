@@ -1,6 +1,4 @@
 import type * as unistLib from "unist";
-import type { Root } from "mdast";
-import type { Node } from "slate";
 import type * as slate from "../../models/slate";
 import type * as mdast from "../../models/mdast";
 import type * as slateInternal from "../mdast-to-slate";
