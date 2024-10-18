@@ -6,12 +6,6 @@ import {
   mdastToSlate,
 } from "../transformers/mdast-to-slate";
 
-declare module "unified" {
-  interface CompileResultMap {
-    remarkToSlateNode: Node[];
-  }
-}
-
 export type Options = {
   overrides?: OverridedMdastBuilders;
 };
@@ -19,8 +13,8 @@ export type Options = {
 const plugin: Plugin<[Options?], Root, Node[]> = function ({
   overrides = {},
 } = {}) {
-  this.compiler = function (node) {
-    return mdastToSlate(node as Root, overrides);
+  this.Compiler = function (node) {
+    return mdastToSlate(node, overrides);
   };
 };
 export default plugin;

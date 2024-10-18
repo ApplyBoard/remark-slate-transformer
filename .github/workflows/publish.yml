@@ -1,0 +1,59 @@
+name: publish
+
+on:
+  # pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  main:
+    runs-on: ubuntu-22.04
+
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      deployments: read
+      discussions: read
+      id-token: write
+      issues: read
+      packages: read
+      pages: read
+      pull-requests: read
+      repository-projects: read
+      security-events: read
+      statuses: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # Always install node manually, regardless of version. See this fun Slack thread:
+      # https://applyboard.slack.com/archives/C01CGMFR0KY/p1676990487132099
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.0'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::649614366484:role/github-actions
+          aws-region: us-east-1
+
+      - name: Login to AWS codeartifact
+        run: aws codeartifact login --tool npm --repository applyboard-npm --domain applyboard-repository-manager --namespace @applyboard
+        shell: bash
+
+      - run: npm ci
+
+      - name: Build package to publish
+        run: npm run build
+        shell: bash
+
+      - name: Publish the package
+        run: |
+          npm publish --registry https://applyboard-repository-manager-649614366484.d.codeartifact.us-east-1.amazonaws.com/npm/applyboard-npm/
+        shell: bash

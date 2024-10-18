@@ -138,6 +138,8 @@ const renderElement = ({
       break;
     case "imageReference":
       break;
+    case "footnote":
+      break;
     case "footnoteReference":
       break;
     default:

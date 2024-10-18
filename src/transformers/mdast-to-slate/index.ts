@@ -1,4 +1,4 @@
-import type { Root, RootContent } from "mdast";
+import type { Root, Content } from "mdast";
 import type { Node } from "slate";
 import type * as slate from "../../models/slate";
 import type * as mdast from "../../models/mdast";
@@ -17,12 +17,12 @@ export type Decoration = Readonly<{
 }>;
 
 export type OverridedMdastBuilders = {
-  [key in RootContent["type"]]?: MdastBuilder<key>;
+  [key in Content["type"]]?: MdastBuilder<key>;
 } & ({ [key: string]: MdastBuilder<typeof key> } | {});
 
 export type MdastBuilder<T extends string> = (
-  node: T extends RootContent["type"]
-    ? Extract<RootContent, { type: T }>
+  node: T extends Content["type"]
+    ? Extract<Content, { type: T }>
     : unknown,
   next: (children: any[]) => any
 ) => object | undefined;
@@ -42,7 +42,7 @@ const buildSlateRoot = (
 };
 
 const convertNodes = (
-  nodes: mdast.RootContent[],
+  nodes: mdast.Content[],
   deco: Decoration,
   overrides: OverridedMdastBuilders
 ): slate.Node[] => {
@@ -53,7 +53,7 @@ const convertNodes = (
 };
 
 const buildSlateNode = (
-  node: mdast.RootContent,
+  node: mdast.Content,
   deco: Decoration,
   overrides: OverridedMdastBuilders
 ): SlateNode[] => {
@@ -120,6 +120,8 @@ const buildSlateNode = (
       return [buildLinkReference(node, deco, overrides)];
     case "imageReference":
       return [buildImageReference(node)];
+    case "footnote":
+      return [buildFootnote(node, deco, overrides)];
     case "footnoteReference":
       return [buildFootnoteReference(node)];
     case "math":
@@ -497,6 +499,19 @@ const buildImageReference = ({
   };
 };
 
+export type Footnote = ReturnType<typeof buildFootnote>;
+
+const buildFootnote = (
+  { type, children }: mdast.Footnote,
+  deco: Decoration,
+  overrides: OverridedMdastBuilders
+) => {
+  return {
+    type,
+    children: convertNodes(children, deco, overrides),
+  };
+};
+
 /**
  * @internal
  */
@@ -540,6 +555,7 @@ export type SlateNode =
   | Image
   | LinkReference
   | ImageReference
+  | Footnote
   | FootnoteReference
   | Math
   | InlineMath;
