@@ -151,7 +151,6 @@ export const MarkdownToSlateJson: StoryObj = {
 export const SlateToMarkdown: StoryObj = {
   render: () => {
     const [value, setValue] = useState(toSlate(text));
-    // console.log(value)
     const [md, setMd] = useState(toMd(value));
     const ref = useRef<Node[]>(null);
     return (

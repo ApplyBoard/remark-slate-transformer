@@ -15,7 +15,7 @@ export type OverridedSlateBuilders = { [key: string]: SlateBuilder };
 
 export type SlateToMdastOptions = {
   textDecorationProcessors: {
-    [key: string]: () => Record<string, unknown> & {
+    [key: string]: (node: any, children: any) => Record<string, unknown> & {
       children: mdast.PhrasingContent[];
       type: string;
       value?: string;
