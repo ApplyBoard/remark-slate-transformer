@@ -3,11 +3,14 @@ import fs from "fs";
 import path from "path";
 import { unified } from "unified";
 import markdown from "remark-parse";
+import remarkDirective from 'remark-directive';
 import gfm from "remark-gfm";
 import footnotes from "remark-footnotes";
 import frontmatter from "remark-frontmatter";
 import math from "remark-math";
 import stringify from "remark-stringify";
+import directive from 'mdast-util-directive'
+import toMarkdown from 'mdast-util-to-markdown'
 import { remarkToSlate, slateToRemark } from ".";
 
 const FIXTURE_PATH = "../fixtures";
@@ -15,18 +18,56 @@ const FIXTURE_PATH = "../fixtures";
 describe("e2e", () => {
   const toSlateProcessor = unified()
     .use(markdown)
+    .use(remarkDirective)
     .use(gfm)
     .use(footnotes, { inlineNotes: true })
     .use(frontmatter, ["yaml", "toml"])
     .use(math)
-    .use(remarkToSlate);
+    .use(remarkToSlate, {
+      overrides: {
+        textDirective: (node, next) => {
+          const attrs: Record<string, unknown> = {};
+          if (node.name === 'notice') {
+            attrs.color = node.attributes.color;
+            attrs.directive = 'notice';
+          }
+          return next(node.children, attrs);
+        }
+      }
+    })
+
   const toRemarkProcessor = unified()
-    .use(slateToRemark)
+    .use(slateToRemark, {
+      textDecorationProcessors: {
+        directive: (node, children) => {
+          if (node.directive === 'notice') {
+            return ({
+              attributes: {
+                color: node.color,
+              },
+              children: [children],
+              name: 'notice',
+              type: 'textDirective',
+            })
+          }
+        }
+      }
+    })
     .use(gfm)
     .use(footnotes, { inlineNotes: true })
     .use(frontmatter, ["yaml", "toml"])
     .use(math)
-    .use(stringify, { bullet: "-", emphasis: "_" });
+    .use(stringify, {
+      bullet: "-",
+      emphasis: "_",
+      handlers: {
+        textDirective: (node) => {
+          return toMarkdown(node, {
+            extensions: [directive.toMarkdown]
+          })
+        }
+      }
+    });
 
   const fixturesDir = path.join(__dirname, FIXTURE_PATH);
   const filenames = fs.readdirSync(fixturesDir);

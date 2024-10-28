@@ -35,14 +35,6 @@ const toSlateProcessor = unified()
 
 const toRemarkProcessor = unified()
   .use(slateToRemark, {
-    overrides: {
-      paragraph: (node, next) => {
-        return {
-          children: next(node.children),
-          type: "paragraph",
-        }
-      },
-    },
     textDecorationProcessors: {
       directive: (node, children) => {
         if (node.directive === 'notice') {

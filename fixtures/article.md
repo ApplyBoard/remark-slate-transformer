@@ -93,3 +93,5 @@ function $initHighlight(block, cls) {
 
 export  $initHighlight;
 ```
+
+:notice[This **content** is a generic directive!]{color=blue}

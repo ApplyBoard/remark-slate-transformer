@@ -740,6 +740,27 @@ export  $initHighlight;",
     "meta": null,
     "type": "code",
   },
+  {
+    "children": [
+      {
+        "color": "blue",
+        "directive": "notice",
+        "text": "This ",
+      },
+      {
+        "color": "blue",
+        "directive": "notice",
+        "strong": true,
+        "text": "content",
+      },
+      {
+        "color": "blue",
+        "directive": "notice",
+        "text": " is a generic directive!",
+      },
+    ],
+    "type": "paragraph",
+  },
 ]
 `;
 
@@ -1525,6 +1546,37 @@ This is <u>HTML</u>
 
 export  $initHighlight;",
     },
+    {
+      "children": [
+        {
+          "attributes": {
+            "color": "blue",
+          },
+          "children": [
+            {
+              "type": "text",
+              "value": "This ",
+            },
+            {
+              "children": [
+                {
+                  "type": "text",
+                  "value": "content",
+                },
+              ],
+              "type": "strong",
+            },
+            {
+              "type": "text",
+              "value": " is a generic directive!",
+            },
+          ],
+          "name": "notice",
+          "type": "textDirective",
+        },
+      ],
+      "type": "paragraph",
+    },
   ],
   "type": "root",
 }
@@ -1627,6 +1679,8 @@ function $initHighlight(block, cls) {
 
 export  $initHighlight;
 \`\`\`
+
+:notice[This **content** is a generic directive!]{color="blue"}
 "
 `;
 
@@ -3319,6 +3373,76 @@ exports[`e2e node-phrasing-2.md 3`] = `
 [link-ref]: example.com
 
 [image-ref]: example.gif
+"
+`;
+
+exports[`e2e node-remark-directive.md 1`] = `
+[
+  {
+    "children": [
+      {
+        "color": "blue",
+        "directive": "notice",
+        "text": "This ",
+      },
+      {
+        "color": "blue",
+        "directive": "notice",
+        "strong": true,
+        "text": "content",
+      },
+      {
+        "color": "blue",
+        "directive": "notice",
+        "text": " is a generic directive!",
+      },
+    ],
+    "type": "paragraph",
+  },
+]
+`;
+
+exports[`e2e node-remark-directive.md 2`] = `
+{
+  "children": [
+    {
+      "children": [
+        {
+          "attributes": {
+            "color": "blue",
+          },
+          "children": [
+            {
+              "type": "text",
+              "value": "This ",
+            },
+            {
+              "children": [
+                {
+                  "type": "text",
+                  "value": "content",
+                },
+              ],
+              "type": "strong",
+            },
+            {
+              "type": "text",
+              "value": " is a generic directive!",
+            },
+          ],
+          "name": "notice",
+          "type": "textDirective",
+        },
+      ],
+      "type": "paragraph",
+    },
+  ],
+  "type": "root",
+}
+`;
+
+exports[`e2e node-remark-directive.md 3`] = `
+":notice[This **content** is a generic directive!]{color="blue"}
 "
 `;
 
