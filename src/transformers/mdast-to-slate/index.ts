@@ -24,7 +24,7 @@ export type MdastBuilder<T extends string> = (
   node: T extends Content["type"]
     ? Extract<Content, { type: T }>
     : unknown,
-  next: (children: any[]) => any
+  next: (children: any[], extraDeco?: Decoration) => any
 ) => object | undefined;
 
 export const mdastToSlate = (
@@ -57,10 +57,14 @@ const buildSlateNode = (
   deco: Decoration,
   overrides: OverridedMdastBuilders
 ): SlateNode[] => {
-  const customNode = overrides[node.type]?.(node as any, (children) =>
-    convertNodes(children, deco, overrides)
+  const customNode = overrides[node.type]?.(node as any, (children, extraDeco) =>
+    convertNodes(children, {...deco, ...(extraDeco || {})}, overrides)
   );
   if (customNode != null) {
+    if (Array.isArray(customNode)) {
+      return customNode as SlateNode[];
+    }
+
     return [customNode as SlateNode];
   }
 
