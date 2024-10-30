@@ -3,11 +3,15 @@ import fs from "fs";
 import path from "path";
 import { unified } from "unified";
 import markdown from "remark-parse";
+import remarkDirective from 'remark-directive';
 import gfm from "remark-gfm";
 import footnotes from "remark-footnotes";
 import frontmatter from "remark-frontmatter";
 import math from "remark-math";
 import stringify from "remark-stringify";
+// @ts-expect-error No type declarations for this version :(
+import directive from 'mdast-util-directive';
+import toMarkdown from 'mdast-util-to-markdown';
 import { remarkToSlate, slateToRemark } from ".";
 
 const FIXTURE_PATH = "../fixtures";
@@ -15,18 +19,68 @@ const FIXTURE_PATH = "../fixtures";
 describe("e2e", () => {
   const toSlateProcessor = unified()
     .use(markdown)
+    .use(remarkDirective)
     .use(gfm)
     .use(footnotes, { inlineNotes: true })
     .use(frontmatter, ["yaml", "toml"])
     .use(math)
-    .use(remarkToSlate);
+    .use(remarkToSlate, {
+      overrides: {
+        textDirective: (node, next) => {
+          const n = node as {
+            attributes: {
+              color: string;
+            }
+            children: unknown[];
+            name: string;
+          }
+          const attrs: Record<string, unknown> = {};
+          if (n.name === 'notice') {
+            // @ts-expect-error Not sure why this is complaining
+            attrs.color = n.attributes.color;
+            // @ts-expect-error Not sure why this is complaining
+            attrs.directive = 'notice';
+          }
+          return next(n.children, attrs);
+        }
+      }
+    })
+
   const toRemarkProcessor = unified()
-    .use(slateToRemark)
+    // @ts-expect-error I don't understand this one
+    .use(slateToRemark, {
+      textDecorationProcessors: {
+        directive: (node, children) => {
+          if (node.directive === 'notice') {
+            return ({
+              attributes: {
+                color: node.color,
+              },
+              children: [children],
+              name: 'notice',
+              type: 'textDirective',
+            })
+          }
+          return null;
+        }
+      }
+    })
     .use(gfm)
     .use(footnotes, { inlineNotes: true })
     .use(frontmatter, ["yaml", "toml"])
     .use(math)
-    .use(stringify, { bullet: "-", emphasis: "_" });
+    // @ts-expect-error `handlers` is supported but for some reason complains about its properties
+    .use(stringify, {
+      bullet: "-",
+      emphasis: "_",
+      handlers: {
+        textDirective: (node: any) => {
+          return toMarkdown(node, {
+            extensions: [directive.toMarkdown]
+          })
+        }
+      }
+    });
 
   const fixturesDir = path.join(__dirname, FIXTURE_PATH);
   const filenames = fs.readdirSync(fixturesDir);

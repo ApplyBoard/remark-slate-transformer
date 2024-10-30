@@ -4,8 +4,6 @@ import type * as mdast from "../../models/mdast";
 import type * as slateInternal from "../mdast-to-slate";
 import { unreachable } from "../../utils";
 
-type DecorationType = keyof slateInternal.Decoration;
-
 type TextOrDecoration =
   | mdast.Text
   | mdast.Emphasis
@@ -15,6 +13,16 @@ type TextOrDecoration =
 
 export type OverridedSlateBuilders = { [key: string]: SlateBuilder };
 
+export type SlateToMdastOptions = {
+  textDecorationProcessors: {
+    [key: string]: (node: any, children: any) => Record<string, unknown> & {
+      children: mdast.PhrasingContent[];
+      type: string;
+      value?: string;
+    };
+  }
+}
+
 export type SlateBuilder = (
   node: unknown,
   next: (children: any[]) => any
@@ -22,27 +30,31 @@ export type SlateBuilder = (
 
 export const slateToMdast = (
   node: slate.Node,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.Root => {
-  return buildMdastRoot(node, overrides);
+  return buildMdastRoot(node, overrides, options);
 };
 
 const buildMdastRoot = (
   node: slate.Node,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.Root => {
   return <mdast.Root>{
     type: "root",
     children: convertNodes(
       (node as any).children,
-      overrides
+      overrides,
+      options
     ) as mdast.Root["children"],
   };
 };
 
 const convertNodes = (
   nodes: slate.Node[],
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): unistLib.Node[] => {
   const mdastNodes: unistLib.Node[] = [];
   let textQueue: slateInternal.Text[] = [];
@@ -51,10 +63,10 @@ const convertNodes = (
     if (n && isText(n)) {
       textQueue.push(n);
     } else {
-      mdastNodes.push(...(convertTexts(textQueue) as any as unistLib.Node[]));
+      mdastNodes.push(...(convertTexts(textQueue, options) as any as unistLib.Node[]));
       textQueue = [];
       if (!n) continue;
-      const node = buildMdastNode(n, overrides);
+      const node = buildMdastNode(n, overrides, options);
       if (node) {
         mdastNodes.push(node as unistLib.Node);
       }
@@ -65,11 +77,12 @@ const convertNodes = (
 };
 
 const convertTexts = (
-  slateTexts: readonly slateInternal.Text[]
+  slateTexts: Array<{ text: string } & Record<string, unknown>>,
+  options: SlateToMdastOptions
 ): TextOrDecoration[] => {
   const mdastTexts: TextOrDecoration[] = [];
-  const starts: DecorationType[] = [];
-  let ends: DecorationType[] = [];
+  const starts: string[] = [];
+  let ends: string[] = [];
   let textTemp: string = "";
   for (let j = 0; j < slateTexts.length; j++) {
     const cur = slateTexts[j]!;
@@ -86,10 +99,11 @@ const convertTexts = (
         "emphasis",
         "strong",
         "delete",
+        ...Object.keys(options.textDecorationProcessors),
         // inlineCode should be last because of the spec in mdast
         // https://github.com/inokawa/remark-slate-transformer/issues/145
         "inlineCode",
-      ] as const
+      ]
     ).forEach((k) => {
       if (cur[k]) {
         if (!prev || !prev[k]) {
@@ -102,7 +116,7 @@ const convertTexts = (
     });
 
     const endsToRemove = starts.reduce<
-      { key: DecorationType; index: number }[]
+      { key: string; index: number }[]
     >((acc, k, kIndex) => {
       if (ends.includes(k)) {
         acc.push({ key: k, index: kIndex });
@@ -150,11 +164,17 @@ const convertTexts = (
             case "delete":
               res = {
                 type: k,
-                children: [res],
+                children: [(res as any)],
               };
               break;
             default:
-              unreachable(k);
+              if (k in (options.textDecorationProcessors)) {
+                // @ts-expect-error TODO
+                res = options?.textDecorationProcessors[k]?.(cur, res)
+              } else {
+                // @ts-expect-error TODO
+                unreachable(k);
+              }
               break;
           }
         });
@@ -187,13 +207,14 @@ const convertTexts = (
 
 const buildMdastNode = (
   node: Exclude<slateInternal.SlateNode, slateInternal.Text>,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): Exclude<
   mdast.Content | mdast.Math | mdast.InlineMath,
   TextOrDecoration
 > | null => {
   const customNode = overrides[node.type]?.(node as any, (children) =>
-    convertNodes(children, overrides)
+    convertNodes(children, overrides, options)
   );
   if (customNode != null) {
     return customNode as any;
@@ -201,23 +222,23 @@ const buildMdastNode = (
 
   switch (node.type) {
     case "paragraph":
-      return buildParagraph(node, overrides);
+      return buildParagraph(node, overrides, options);
     case "heading":
-      return buildHeading(node, overrides);
+      return buildHeading(node, overrides, options);
     case "thematicBreak":
       return buildThematicBreak(node);
     case "blockquote":
-      return buildBlockquote(node, overrides);
+      return buildBlockquote(node, overrides, options);
     case "list":
-      return buildList(node, overrides);
+      return buildList(node, overrides, options);
     case "listItem":
-      return buildListItem(node, overrides);
+      return buildListItem(node, overrides, options);
     case "table":
-      return buildTable(node, overrides);
+      return buildTable(node, overrides, options);
     case "tableRow":
-      return buildTableRow(node, overrides);
+      return buildTableRow(node, overrides, options);
     case "tableCell":
-      return buildTableCell(node, overrides);
+      return buildTableCell(node, overrides, options);
     case "html":
       return buildHtml(node);
     case "code":
@@ -229,19 +250,19 @@ const buildMdastNode = (
     case "definition":
       return buildDefinition(node);
     case "footnoteDefinition":
-      return buildFootnoteDefinition(node, overrides);
+      return buildFootnoteDefinition(node, overrides, options);
     case "break":
       return buildBreak(node);
     case "link":
-      return buildLink(node, overrides);
+      return buildLink(node, overrides, options);
     case "image":
       return buildImage(node);
     case "linkReference":
-      return buildLinkReference(node, overrides);
+      return buildLinkReference(node, overrides, options);
     case "imageReference":
       return buildImageReference(node);
     case "footnote":
-      return buildFootnote(node, overrides);
+      return buildFootnote(node, overrides, options);
     case "footnoteReference":
       return creatFootnoteReference(node);
     case "math":
@@ -265,9 +286,9 @@ const mergeTexts = (nodes: TextOrDecoration[]): TextOrDecoration[] => {
     const last = res[res.length - 1];
     if (last && last.type === cur.type) {
       if (last.type === "text") {
-        last.value += (cur as typeof last).value;
+        last.value += (cur as typeof last).value!;
       } else if (last.type === "inlineCode") {
-        last.value += (cur as typeof last).value;
+        last.value += (cur as typeof last).value!;
       } else {
         last.children = mergeTexts(
           last.children.concat(
@@ -285,22 +306,24 @@ const mergeTexts = (nodes: TextOrDecoration[]): TextOrDecoration[] => {
 
 const buildParagraph = (
   { type, children }: slateInternal.Paragraph,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.Paragraph => {
   return {
     type,
-    children: convertNodes(children, overrides) as mdast.Paragraph["children"],
+    children: convertNodes(children, overrides, options) as mdast.Paragraph["children"],
   };
 };
 
 const buildHeading = (
   { type, depth, children }: slateInternal.Heading,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.Heading => {
   return {
     type,
     depth,
-    children: convertNodes(children, overrides) as mdast.Heading["children"],
+    children: convertNodes(children, overrides, options) as mdast.Heading["children"],
   };
 };
 
@@ -314,67 +337,73 @@ const buildThematicBreak = ({
 
 const buildBlockquote = (
   { type, children }: slateInternal.Blockquote,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.Blockquote => {
   return {
     type,
-    children: convertNodes(children, overrides) as mdast.Blockquote["children"],
+    children: convertNodes(children, overrides, options) as mdast.Blockquote["children"],
   };
 };
 
 const buildList = (
   { type, ordered, start, spread, children }: slateInternal.List,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.List => {
   return {
     type,
     ordered,
     start,
     spread,
-    children: convertNodes(children, overrides) as mdast.List["children"],
+    children: convertNodes(children, overrides, options) as mdast.List["children"],
   };
 };
 
 const buildListItem = (
   { type, checked, spread, children }: slateInternal.ListItem,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.ListItem => {
   return {
     type,
     checked,
     spread,
-    children: convertNodes(children, overrides) as mdast.ListItem["children"],
+    children: convertNodes(children, overrides, options) as mdast.ListItem["children"],
   };
 };
 
 const buildTable = (
   { type, align, children }: slateInternal.Table,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.Table => {
   return {
     type,
     align,
-    children: convertNodes(children, overrides) as mdast.Table["children"],
+    children: convertNodes(children, overrides, options) as mdast.Table["children"],
   };
 };
 
 const buildTableRow = (
   { type, children }: slateInternal.TableRow,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.TableRow => {
   return {
     type,
-    children: convertNodes(children, overrides) as mdast.TableRow["children"],
+    children: convertNodes(children, overrides, options) as mdast.TableRow["children"],
   };
 };
 
 const buildTableCell = (
   { type, children }: slateInternal.TableCell,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.TableCell => {
   return {
     type,
-    children: convertNodes(children, overrides) as mdast.TableCell["children"],
+    children: convertNodes(children, overrides, options) as mdast.TableCell["children"],
   };
 };
 
@@ -431,7 +460,8 @@ const buildDefinition = ({
 
 const buildFootnoteDefinition = (
   { type, identifier, label, children }: slateInternal.FootnoteDefinition,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.FootnoteDefinition => {
   return {
     type,
@@ -439,7 +469,8 @@ const buildFootnoteDefinition = (
     label,
     children: convertNodes(
       children,
-      overrides
+      overrides,
+      options
     ) as mdast.FootnoteDefinition["children"],
   };
 };
@@ -452,13 +483,14 @@ const buildBreak = ({ type }: slateInternal.Break): mdast.Break => {
 
 const buildLink = (
   { type, url, title, children }: slateInternal.Link,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.Link => {
   return {
     type,
     url,
     title,
-    children: convertNodes(children, overrides) as mdast.Link["children"],
+    children: convertNodes(children, overrides, options) as mdast.Link["children"],
   };
 };
 
@@ -484,7 +516,8 @@ const buildLinkReference = (
     referenceType,
     children,
   }: slateInternal.LinkReference,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.LinkReference => {
   return {
     type,
@@ -493,7 +526,8 @@ const buildLinkReference = (
     referenceType,
     children: convertNodes(
       children,
-      overrides
+      overrides,
+      options
     ) as mdast.LinkReference["children"],
   };
 };
@@ -516,11 +550,12 @@ const buildImageReference = ({
 
 const buildFootnote = (
   { type, children }: slateInternal.Footnote,
-  overrides: OverridedSlateBuilders
+  overrides: OverridedSlateBuilders,
+  options: SlateToMdastOptions
 ): mdast.Footnote => {
   return {
     type,
-    children: convertNodes(children, overrides) as mdast.Footnote["children"],
+    children: convertNodes(children, overrides, options) as mdast.Footnote["children"],
   };
 };
 

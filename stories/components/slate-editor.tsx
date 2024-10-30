@@ -161,6 +161,9 @@ const renderLeaf = ({ attributes, children, leaf }: RenderLeafProps) => {
   if (leaf.inlineCode) {
     children = <code>{children}</code>;
   }
+  if (leaf.directive === 'notice') {
+    children = <span style={{ backgroundColor: 'yellow',  color: leaf.color }}>{children}</span>
+  }
   return <span {...attributes}>{children}</span>;
 };
 
