@@ -9,8 +9,9 @@ import footnotes from "remark-footnotes";
 import frontmatter from "remark-frontmatter";
 import math from "remark-math";
 import stringify from "remark-stringify";
-import directive from 'mdast-util-directive'
-import toMarkdown from 'mdast-util-to-markdown'
+// @ts-expect-error No type declarations for this version :(
+import directive from 'mdast-util-directive';
+import toMarkdown from 'mdast-util-to-markdown';
 import { remarkToSlate, slateToRemark } from ".";
 
 const FIXTURE_PATH = "../fixtures";
@@ -26,17 +27,27 @@ describe("e2e", () => {
     .use(remarkToSlate, {
       overrides: {
         textDirective: (node, next) => {
+          const n = node as {
+            attributes: {
+              color: string;
+            }
+            children: unknown[];
+            name: string;
+          }
           const attrs: Record<string, unknown> = {};
-          if (node.name === 'notice') {
-            attrs.color = node.attributes.color;
+          if (n.name === 'notice') {
+            // @ts-expect-error Not sure why this is complaining
+            attrs.color = n.attributes.color;
+            // @ts-expect-error Not sure why this is complaining
             attrs.directive = 'notice';
           }
-          return next(node.children, attrs);
+          return next(n.children, attrs);
         }
       }
     })
 
   const toRemarkProcessor = unified()
+    // @ts-expect-error I don't understand this one
     .use(slateToRemark, {
       textDecorationProcessors: {
         directive: (node, children) => {
@@ -50,6 +61,7 @@ describe("e2e", () => {
               type: 'textDirective',
             })
           }
+          return null;
         }
       }
     })
@@ -57,11 +69,12 @@ describe("e2e", () => {
     .use(footnotes, { inlineNotes: true })
     .use(frontmatter, ["yaml", "toml"])
     .use(math)
+    // @ts-expect-error `handlers` is supported but for some reason complains about its properties
     .use(stringify, {
       bullet: "-",
       emphasis: "_",
       handlers: {
-        textDirective: (node) => {
+        textDirective: (node: any) => {
           return toMarkdown(node, {
             extensions: [directive.toMarkdown]
           })
