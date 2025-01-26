@@ -4,7 +4,6 @@ import { Node } from "slate";
 import { unified } from "unified";
 import markdown from "remark-parse";
 import gfm from "remark-gfm";
-import remarkDirective from 'remark-directive';
 import frontmatter from "remark-frontmatter";
 import stringify from "remark-stringify";
 import { remarkToSlate, slateToRemark } from "../../src";
@@ -12,55 +11,18 @@ import SlateEditor from "../components/slate-editor";
 import TextEditor from "../components/text-editor";
 import Text from "../components/text";
 import text from "../../fixtures/article.md?raw";
-import directive from 'mdast-util-directive'
-import toMarkdown from 'mdast-util-to-markdown'
 
 const toSlateProcessor = unified()
   .use(markdown)
-  .use(remarkDirective)
   .use(gfm)
   .use(frontmatter)
-  .use(remarkToSlate, {
-    overrides: {
-      textDirective: (node, next) => {
-        const attrs: Record<string, unknown> = { position: node.position };
-        if (node.name === 'notice') {
-          attrs.color = node.attributes.color;
-          attrs.directive = 'notice';
-        }
-        return next(node.children, attrs);
-      }
-    }
-  })
+  .use(remarkToSlate);
 
 const toRemarkProcessor = unified()
-  .use(slateToRemark, {
-    textDecorationProcessors: {
-      directive: (node, children) => {
-        if (node.directive === 'notice') {
-          return ({
-            attributes: {
-              color: node.color,
-            },
-            children: [children],
-            name: 'notice',
-            type: 'textDirective',
-          })
-        }
-      }
-    }
-  })
+  .use(slateToRemark)
   .use(gfm)
   .use(frontmatter)
-  .use(stringify, {
-    handlers: {
-      textDirective: (node) => {
-        return toMarkdown(node, {
-          extensions: [directive.toMarkdown]
-        })
-      }
-    }
-  });
+  .use(stringify);
 
 const toSlate = (s: string) => toSlateProcessor.processSync(s).result as Node[];
 const toMd = (value: Node[]) => {
