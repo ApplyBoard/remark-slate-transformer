@@ -1,1 +1,0 @@
-:notice[This **content** is a generic directive!]{color=blue}
